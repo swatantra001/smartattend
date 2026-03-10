@@ -1,0 +1,129 @@
+export declare enum UserRole {
+    STUDENT = "STUDENT",
+    PROFESSOR = "PROFESSOR",
+    ADMIN = "ADMIN"
+}
+export declare enum AttendanceStatus {
+    PRESENT = "PRESENT",
+    ABSENT = "ABSENT",
+    MANUAL_OVERRIDE = "MANUAL_OVERRIDE"
+}
+export declare enum VerificationStatus {
+    PENDING = "PENDING",
+    FACE_PASSED = "FACE_PASSED",
+    VERIFIED = "VERIFIED",
+    FAILED = "FAILED",
+    SUSPICIOUS = "SUSPICIOUS"
+}
+export declare enum LivenessChallenge {
+    BLINK_TWICE = "BLINK_TWICE",
+    TURN_HEAD_RIGHT = "TURN_HEAD_RIGHT",
+    TURN_HEAD_LEFT = "TURN_HEAD_LEFT",
+    SMILE = "SMILE",
+    NOD = "NOD",
+    OPEN_MOUTH = "OPEN_MOUTH"
+}
+export declare enum DeviceResetStatus {
+    PENDING = "PENDING",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED"
+}
+export interface User {
+    user_id: string;
+    email: string;
+    role: UserRole;
+    college_id: string;
+    is_active: boolean;
+    created_at: string;
+}
+export interface Student {
+    student_id: string;
+    user_id: string;
+    name: string;
+    roll_number: string;
+    dept_id: string;
+    semester: number;
+    face_embedding?: number[];
+    face_enrolled_at?: string;
+    face_photo_url?: string;
+}
+export interface Professor {
+    professor_id: string;
+    user_id: string;
+    name: string;
+    employee_code: string;
+    dept_id: string;
+}
+export interface AttendanceSession {
+    session_id: string;
+    professor_id: string;
+    course_id: string;
+    radius_meters: number;
+    status: 'ACTIVE' | 'ENDED' | 'EXPIRED';
+    challenges: string[];
+    started_at: string;
+    ended_at?: string;
+    expires_at: string;
+}
+export interface AttendanceRecord {
+    record_id: string;
+    session_id: string;
+    student_id: string;
+    status: AttendanceStatus;
+    verification_status: VerificationStatus;
+    face_score?: number;
+    liveness_score?: number;
+    scene_score?: number;
+    marked_by: 'SYSTEM' | 'PROFESSOR';
+    verification_timestamp?: string;
+}
+export interface DashboardStudentCard {
+    student_id: string;
+    name: string;
+    roll_number: string;
+    status: AttendanceStatus;
+    verification_status: VerificationStatus;
+    face_score?: number;
+    liveness_score?: number;
+    scene_score?: number;
+    marked_by?: 'SYSTEM' | 'PROFESSOR';
+}
+export interface AttendanceNotificationPayload {
+    type: 'ATTENDANCE_REQUEST';
+    session_id: string;
+    course_name: string;
+    professor_name: string;
+    expires_at: string;
+    challenges: string[];
+}
+export interface WSEvent {
+    type: 'STUDENT_VERIFIED' | 'STUDENT_FAILED' | 'STUDENT_SUSPICIOUS' | 'STUDENT_MANUAL_OVERRIDE' | 'SESSION_ENDED' | 'SESSION_EXPIRED';
+    student_id?: string;
+    session_id: string;
+    data?: Partial<DashboardStudentCard>;
+    timestamp: string;
+}
+export interface DeviceBinding {
+    binding_id: string;
+    user_id: string;
+    device_id: string;
+    device_model?: string;
+    platform?: string;
+    fcm_token?: string;
+    is_active: boolean;
+    last_seen_at: string;
+}
+export interface DeviceResetRequest {
+    request_id: string;
+    user_id: string;
+    old_device_id?: string;
+    new_device_id: string;
+    reason: string;
+    proof_url?: string;
+    status: DeviceResetStatus;
+    admin_id?: string;
+    admin_note?: string;
+    resolved_at?: string;
+    created_at: string;
+}
+//# sourceMappingURL=index.d.ts.map

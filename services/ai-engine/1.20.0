@@ -1,0 +1,20 @@
+Collecting onnxruntime
+  Downloading onnxruntime-1.24.2-cp313-cp313-win_amd64.whl.metadata (5.2 kB)
+Collecting flatbuffers (from onnxruntime)
+  Downloading flatbuffers-25.12.19-py2.py3-none-any.whl.metadata (1.0 kB)
+Requirement already satisfied: numpy>=1.21.6 in d:\smartattend\services\ai-engine\venv\lib\site-packages (from onnxruntime) (2.4.2)
+Requirement already satisfied: packaging in d:\smartattend\services\ai-engine\venv\lib\site-packages (from onnxruntime) (26.0)
+Requirement already satisfied: protobuf in d:\smartattend\services\ai-engine\venv\lib\site-packages (from onnxruntime) (7.34.0)
+Collecting sympy (from onnxruntime)
+  Downloading sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy->onnxruntime)
+  Using cached mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Downloading onnxruntime-1.24.2-cp313-cp313-win_amd64.whl (12.5 MB)
+   ---------------------------------------- 12.5/12.5 MB 23.5 MB/s eta 0:00:00
+Downloading flatbuffers-25.12.19-py2.py3-none-any.whl (26 kB)
+Downloading sympy-1.14.0-py3-none-any.whl (6.3 MB)
+   ---------------------------------------- 6.3/6.3 MB 26.5 MB/s eta 0:00:00
+Using cached mpmath-1.3.0-py3-none-any.whl (536 kB)
+Installing collected packages: mpmath, flatbuffers, sympy, onnxruntime
+
+Successfully installed flatbuffers-25.12.19 mpmath-1.3.0 onnxruntime-1.24.2 sympy-1.14.0

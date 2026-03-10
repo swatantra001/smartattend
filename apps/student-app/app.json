@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "SmartAttend Student",
+    "slug": "smartattend-student",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1F4E79"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.smartattend.student",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera is required for face verification to mark attendance.",
+        "NSLocationWhenInUseUsageDescription": "Location is required to verify you are inside the classroom.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Background location is used to detect when attendance sessions start near you."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1F4E79"
+      },
+      "package": "com.smartattend.student",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Camera is needed for attendance verification.",
+          "enableMicrophonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Location needed to verify classroom presence.",
+          "locationAlwaysPermission": "Background location tracks classroom entry.",
+          "locationWhenInUsePermission": "Location verifies you are in the classroom.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true 
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1F4E79",
+          "sounds": [
+            "./assets/notification.wav"
+          ],
+          "androidMode": "default",
+          "androidCollapsedTitle": "Attendance"
+        }
+      ],
+      "expo-font"
+    ],
+    "scheme": "smartattend-student",
+    "extra": {
+      "eas": {
+        "projectId": "e1d358e7-eb20-439d-be1c-c198acd02181"
+      }
+    }
+  }
+}

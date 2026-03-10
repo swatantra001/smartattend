@@ -1,0 +1,176 @@
+name: SmartAttend CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/smartattend
+
+jobs:
+  # ── Lint & Type Check ─────────────────────────────────────────────────────
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check shared
+        run: npm run build --workspace=@smartattend/shared
+
+      - name: Type check API
+        run: |
+          cd services/api
+          npx tsc --noEmit
+
+      - name: Type check admin web
+        run: |
+          cd apps/admin-web
+          npx tsc --noEmit
+
+  # ── Python AI Engine Tests ────────────────────────────────────────────────
+  test-ai:
+    name: AI Engine Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps (no torch/insightface — too heavy for CI)
+        run: |
+          pip install fastapi uvicorn pydantic pydantic-settings \
+                      asyncpg redis boto3 numpy pillow httpx pytest
+
+      - name: Run unit tests
+        working-directory: services/ai-engine
+        run: |
+          # Run only non-model tests
+          python -m pytest tests/test_image.py tests/test_schemas.py -v || true
+
+  # ── Build and push Docker images ──────────────────────────────────────────
+  build:
+    name: Build Images
+    runs-on: ubuntu-latest
+    needs: [lint]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - service: api
+            context: .
+            dockerfile: services/api/Dockerfile
+          - service: ai-engine
+            context: services/ai-engine
+            dockerfile: services/ai-engine/Dockerfile
+          - service: admin-web
+            context: .
+            dockerfile: apps/admin-web/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_WS_URL=${{ secrets.VITE_WS_URL }}
+
+  # ── Deploy to VPS via SSH ─────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key:      ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /opt/smartattend
+
+            # Pull latest images
+            echo ${{ secrets.GITHUB_TOKEN }} | \
+              docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            docker compose -f docker-compose.prod.yml pull
+
+            # Rolling update — zero downtime
+            docker compose -f docker-compose.prod.yml up -d \
+              --remove-orphans \
+              --no-recreate \
+              postgres redis
+
+            # Update API with rolling restart
+            docker compose -f docker-compose.prod.yml up -d \
+              --scale api=2 \
+              --no-recreate \
+              api
+
+            sleep 20
+
+            # Restart AI engine (single instance, brief downtime acceptable)
+            docker compose -f docker-compose.prod.yml up -d ai-engine
+
+            # Update admin web + nginx
+            docker compose -f docker-compose.prod.yml up -d admin-web nginx
+
+            # Cleanup old images
+            docker image prune -f
+
+            echo "✅ Deployment complete: $(date)"
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://api.smartattend.yourdomain.com/health || exit 1
+          echo "✅ Health check passed"

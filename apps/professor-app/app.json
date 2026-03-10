@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "SmartAttend Professor",
+    "slug": "smartattend-professor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E7145"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartattend.professor",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Location is required to set the attendance geofence for your classroom."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#1E7145"
+      },
+      "package": "com.smartattend.professor",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "VIBRATE",
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Location needed to set classroom geofence."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#1E7145"
+        }
+      ],
+      "expo-font"
+    ],
+    "scheme": "smartattend-professor",
+    "extra": {
+      "eas": {
+        "projectId": "54d6be9e-5d45-4c20-9e6e-b40dff0a736e"
+      },
+      "router": {
+        "origin": false
+      }
+    },
+    "owner": "swatantram01"
+  }
+}
