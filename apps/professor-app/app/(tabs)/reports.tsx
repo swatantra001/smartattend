@@ -20,7 +20,7 @@ try { XLSX = require('xlsx'); } catch (_) {}
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
-interface Course { course_id: string; name: string; code: string; }
+interface Course { course_id: string; name: string; code: string; section: string }
 interface StudentReport {
   name: string; roll_number: string;
   total_sessions: number; present_count: number;
@@ -542,7 +542,7 @@ export default function ReportsScreen() {
               onPress={() => loadReport(item)}
             >
               <Text style={[styles.coursePillText, selectedCourse?.course_id === item.course_id && styles.coursePillTextActive]}>
-                {item.code}
+                {`${item.name} ${item.section ? `(${item.section})` : ''}`}
               </Text>
             </TouchableOpacity>
           )}

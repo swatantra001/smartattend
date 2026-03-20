@@ -21,10 +21,16 @@ import locationRoutes from './routes/location.routes';
 import attendanceRoutes from './routes/attendance.routes';
 import adminRoutes from './routes/admin.routes';
 
+// Add these 3 lines:
+import courseRoutes from './routes/courseRoutes';
+import assignmentRoutes from './routes/assignmentRoutes';
+import './cron/assignmentCron'; // This starts the 6-hour deadline background checker
+
 import { errorHandler } from './middleware/error.middleware';
 import { deviceBindingMiddleware } from './middleware/device.middleware';
 import { initSocketHandlers } from './sockets/socket.handler';
 import { authenticate } from './middleware/auth.middleware';
+import { startCronJobs } from './cron/assignmentCron';
 
 const app = express();
 const httpServer = createServer(app);
@@ -32,7 +38,13 @@ const httpServer = createServer(app);
 // ─── SOCKET.IO SETUP ──────────────────────────────────────────────────────────
 export const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3001',
+      'http://localhost:3000',
+      'http://localhost:3002',
+      'http://10.111.223.185:3001',
+      '*'
+    ],
     methods: ['GET', 'POST']
   },
   transports: ['websocket', 'polling']
@@ -40,10 +52,37 @@ export const io = new SocketIOServer(httpServer, {
 
 // ─── SECURITY MIDDLEWARE ──────────────────────────────────────────────────────
 app.use(helmet());
+// app.use(cors({
+//   origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+//     'http://localhost:3001',
+//     'http://localhost:3000',
+//     'http://10.111.223.185:3001',
+//     '*'
+//   ],
+//   credentials: true,
+// }));
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:3001',
+  'http://localhost:3000',
+  'http://localhost:3002',
+  'http://10.111.223.185:3001',
+];
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-  credentials: true
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow Postman / mobile apps
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
 }));
+// Node.js Backend - index.ts
+// Remove the old app.use(cors(...)) line entirely to avoid conflicts!
 app.use(compression());
 app.use(express.json({ limit: '10mb' })); // allow base64 frame uploads
 app.use(express.urlencoded({ extended: true }));
@@ -73,6 +112,9 @@ app.use('/api/professors', authenticate, professorRoutes);
 app.use('/api/location', deviceBindingMiddleware, locationRoutes);
 app.use('/api/attendance', deviceBindingMiddleware, attendanceRoutes);
 app.use('/api/admin', adminRoutes); // admin has its own auth middleware
+// Add these 2 lines:
+app.use('/api/courses', authenticate, courseRoutes);
+app.use('/api/assignments', authenticate, assignmentRoutes);
 
 // ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get('/health', async (_req, res) => {
@@ -106,6 +148,8 @@ async function start() {
     const PORT = process.env.PORT || 4000;
     httpServer.listen(Number(PORT), '0.0.0.0', () => {
       logger.info(`🚀 SmartAttend API running on port ${PORT}`);
+      // 👈 Start the background jobs
+      startCronJobs();
     });
   } catch (err) {
     logger.error('❌ Failed to start server:', err);

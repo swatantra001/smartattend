@@ -511,7 +511,7 @@ export default function SessionsScreen() {
 							style={[ss.courseTab, activeCourse?.course_id === c.course_id && ss.courseTabActive]}>
 							<Text style={[ss.courseTabTxt,
 							activeCourse?.course_id === c.course_id && ss.courseTabTxtActive]}>
-								{c.code}{c.section ? ` §${c.section}` : ''}
+								{c.name}{c.section ? ` (${c.section})` : ''}
 							</Text>
 						</TouchableOpacity>
 					))}

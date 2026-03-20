@@ -16,16 +16,16 @@ import { COLORS, SPACING, RADIUS } from '../../src/constants';
 
 // ─── ADD these imports at the top (merge with existing import block) ───────
 import {
-Animated, Modal,
+  Animated, Modal,
   TextInput, Easing, Dimensions,
 } from 'react-native';
 
 // ── At top, replace the dimension/radar constants: ──────────────────────────
 const { width: SW, height: SH } = Dimensions.get('window');
 const RADAR_SIZE = Math.min(SW - 48, 300);
-const RADAR_R    = RADAR_SIZE / 2;
+const RADAR_R = RADAR_SIZE / 2;
 
-const P  = '#2D6A4F';   // deep forest green (matches header)
+const P = '#2D6A4F';   // deep forest green (matches header)
 const PL = '#40916C';   // lighter green (matches button border/outline)
 const PA = '#D8F3DC';   // light green tint (matches subtle backgrounds)
 
@@ -51,31 +51,31 @@ export default function ProfessorHomeScreen() {
   // ── Session config modal state ────────────────────────────────────────────
   const [configModalVisible, setConfigModalVisible] = useState(false);
   const [configCourse, setConfigCourse] = useState<Course | null>(null);
-  const [cfgRadius,   setCfgRadius]   = useState('200');
+  const [cfgRadius, setCfgRadius] = useState('200');
   const [cfgDuration, setCfgDuration] = useState('60');
-  const [cfgCredits,  setCfgCredits]  = useState('1');
-  const [isFetching,  setIsFetching]  = useState(false);
+  const [cfgCredits, setCfgCredits] = useState('1');
+  const [isFetching, setIsFetching] = useState(false);
 
   // ── Radar modal state ─────────────────────────────────────────────────────
-  const [radarVisible,   setRadarVisible]   = useState(false);
-  const [radarStudents,  setRadarStudents]  = useState<any[]>([]);
-  const [radarTotal,     setRadarTotal]     = useState(0);
-  const [radarInRange,   setRadarInRange]   = useState(0);
-  const [profLat,        setProfLat]        = useState(0);
-  const [profLng,        setProfLng]        = useState(0);
+  const [radarVisible, setRadarVisible] = useState(false);
+  const [radarStudents, setRadarStudents] = useState<any[]>([]);
+  const [radarTotal, setRadarTotal] = useState(0);
+  const [radarInRange, setRadarInRange] = useState(0);
+  const [profLat, setProfLat] = useState(0);
+  const [profLng, setProfLng] = useState(0);
   const [isStartingFinal, setIsStartingFinal] = useState(false);
 
- // Radar sweep animation
-  const sweepAngle    = useRef(new Animated.Value(0)).current;
-  const radarSlide    = useRef(new Animated.Value(SH)).current;
-  const configSlide   = useRef(new Animated.Value(SH)).current;
+  // Radar sweep animation
+  const sweepAngle = useRef(new Animated.Value(0)).current;
+  const radarSlide = useRef(new Animated.Value(SH)).current;
+  const configSlide = useRef(new Animated.Value(SH)).current;
   const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Selected blip for detail popup
   const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
   const blipScales = useRef<Map<string, Animated.Value>>(new Map()).current;
 
- function getBlipScale(id: string): Animated.Value {
+  function getBlipScale(id: string): Animated.Value {
     if (!blipScales.has(id)) {
       const av = new Animated.Value(1);
       blipScales.set(id, av);
@@ -299,7 +299,7 @@ export default function ProfessorHomeScreen() {
   }
 
 
-   // ── Final: confirm & start session from radar screen ─────────────────────
+  // ── Final: confirm & start session from radar screen ─────────────────────
   async function handleConfirmStart() {
     if (!configCourse) return;
     setIsStartingFinal(true);
@@ -434,6 +434,26 @@ export default function ProfessorHomeScreen() {
     }
   }
 
+  // ─── ADD THIS HELPER FUNCTION ────────────────────────────────────────────────
+  function timeAgo(dateString?: string): string {
+    if (!dateString) return 'No Ping';
+    const seconds = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000);
+
+    if (seconds < 60) return 'Just now';
+
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+
+    const months = Math.floor(days / 30);
+    return `${months}mo ago`;
+  }
+
   if (checkingActive) {
     return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   }
@@ -519,7 +539,7 @@ export default function ProfessorHomeScreen() {
           ))
         )}
       </ScrollView>
-       {/* ════════════════════════════════════════════
+      {/* ════════════════════════════════════════════
           SESSION CONFIG MODAL
       ════════════════════════════════════════════ */}
       {configModalVisible && (
@@ -555,7 +575,7 @@ export default function ProfessorHomeScreen() {
                 </View>
                 <View style={ms.inputRow}>
                   <TouchableOpacity style={ms.stepper}
-                    onPress={() => setCfgRadius(r => String(Math.max(50, parseInt(r||'200') - 25)))}>
+                    onPress={() => setCfgRadius(r => String(Math.max(50, parseInt(r || '200') - 25)))}>
                     <Text style={ms.stepperTxt}>−</Text>
                   </TouchableOpacity>
                   <TextInput
@@ -566,16 +586,16 @@ export default function ProfessorHomeScreen() {
                     selectionColor={P}
                   />
                   <TouchableOpacity style={ms.stepper}
-                    onPress={() => setCfgRadius(r => String(Math.min(500, parseInt(r||'200') + 25)))}>
+                    onPress={() => setCfgRadius(r => String(Math.min(500, parseInt(r || '200') + 25)))}>
                     <Text style={ms.stepperTxt}>+</Text>
                   </TouchableOpacity>
                 </View>
                 {/* Visual slider track */}
                 <View style={ms.sliderTrack}>
                   <View style={[ms.sliderFill,
-                    { width: `${Math.max(2, ((parseInt(cfgRadius)||200) - 50) / 450 * 100)}%` as any }]} />
+                  { width: `${Math.max(2, ((parseInt(cfgRadius) || 200) - 50) / 450 * 100)}%` as any }]} />
                   <View style={[ms.sliderThumb,
-                    { left: `${Math.max(0, ((parseInt(cfgRadius)||200) - 50) / 450 * 100 - 1.5)}%` as any }]} />
+                  { left: `${Math.max(0, ((parseInt(cfgRadius) || 200) - 50) / 450 * 100 - 1.5)}%` as any }]} />
                 </View>
                 <View style={ms.fieldHintRow}>
                   <Text style={ms.fieldHint}>50m tight</Text>
@@ -596,7 +616,7 @@ export default function ProfessorHomeScreen() {
                 </View>
                 <View style={ms.inputRow}>
                   <TouchableOpacity style={ms.stepper}
-                    onPress={() => setCfgDuration(d => String(Math.max(30, parseInt(d||'60') - 15)))}>
+                    onPress={() => setCfgDuration(d => String(Math.max(30, parseInt(d || '60') - 15)))}>
                     <Text style={ms.stepperTxt}>−</Text>
                   </TouchableOpacity>
                   <TextInput
@@ -607,7 +627,7 @@ export default function ProfessorHomeScreen() {
                     selectionColor={P}
                   />
                   <TouchableOpacity style={ms.stepper}
-                    onPress={() => setCfgDuration(d => String(Math.min(300, parseInt(d||'60') + 15)))}>
+                    onPress={() => setCfgDuration(d => String(Math.min(300, parseInt(d || '60') + 15)))}>
                     <Text style={ms.stepperTxt}>+</Text>
                   </TouchableOpacity>
                 </View>
@@ -669,7 +689,7 @@ export default function ProfessorHomeScreen() {
                   width: RADAR_SIZE * r, height: RADAR_SIZE * r,
                   borderRadius: (RADAR_SIZE * r) / 2,
                   left: RADAR_R - (RADAR_SIZE * r) / 2,
-                  top:  RADAR_R - (RADAR_SIZE * r) / 2,
+                  top: RADAR_R - (RADAR_SIZE * r) / 2,
                   borderColor: r === 1.0
                     ? 'rgba(27,58,92,0.6)'
                     : 'rgba(27,58,92,0.25)',
@@ -681,7 +701,7 @@ export default function ProfessorHomeScreen() {
               <View style={ms.crossV} />
 
               {/* Degree ticks at 0/90/180/270 */}
-              {['N','E','S','W'].map((dir, i) => {
+              {['N', 'E', 'S', 'W'].map((dir, i) => {
                 const angle = i * 90 * Math.PI / 180;
                 const tx = RADAR_R + Math.sin(angle) * (RADAR_R - 10);
                 const ty = RADAR_R - Math.cos(angle) * (RADAR_R - 10);
@@ -720,16 +740,16 @@ export default function ProfessorHomeScreen() {
               {radarStudents.map((student) => {
                 if (student.distance_meters == null || student.bearing_degrees == null) return null;
 
-                const maxDist   = parseInt(cfgRadius) || 200;
-                const distPct   = Math.min(student.distance_meters / maxDist, 0.93);
+                const maxDist = parseInt(cfgRadius) || 200;
+                const distPct = Math.min(student.distance_meters / maxDist, 0.93);
                 const bearingRad = (student.bearing_degrees * Math.PI) / 180;
                 const px = RADAR_R + Math.sin(bearingRad) * distPct * RADAR_R;
                 const py = RADAR_R - Math.cos(bearingRad) * distPct * RADAR_R;
 
                 const isInRange = student.location_status === 'IN_RANGE';
-                const isStale   = student.location_status === 'STALE';
+                const isStale = student.location_status === 'STALE';
                 const blipColor = isInRange ? '#22c55e' : isStale ? '#f59e0b' : '#94a3b8';
-                const scale     = getBlipScale(student.student_id);
+                const scale = getBlipScale(student.student_id);
                 const isSelected = selectedStudent?.student_id === student.student_id;
 
                 return (
@@ -761,7 +781,7 @@ export default function ProfessorHomeScreen() {
               })}
 
               {/* Range ring label */}
-              <Text style={ms.rangeLbl}>{parseInt(cfgRadius)||200}m</Text>
+              <Text style={ms.rangeLbl}>{parseInt(cfgRadius) || 200}m</Text>
 
               {/* Rescan indicator */}
               <View style={ms.rescanBadge}>
@@ -777,8 +797,8 @@ export default function ProfessorHomeScreen() {
                   <View style={[ms.detailStatusDot, {
                     backgroundColor:
                       selectedStudent.location_status === 'IN_RANGE' ? '#22c55e'
-                      : selectedStudent.location_status === 'STALE'   ? '#f59e0b'
-                      : '#94a3b8'
+                        : selectedStudent.location_status === 'STALE' ? '#f59e0b'
+                          : '#94a3b8'
                   }]} />
                   <View style={{ flex: 1 }}>
                     <Text style={ms.detailName}>{selectedStudent.name}</Text>
@@ -801,15 +821,30 @@ export default function ProfessorHomeScreen() {
                         : '—'}
                     </Text>
                   </View>
+                  {/* <View style={ms.detailCell}>
+                    <Text style={ms.detailCellLabel}>STATUS</Text>
+                    <Text style={[ms.detailCellValue, {
+                      color: selectedStudent.location_status === 'IN_RANGE' ? '#22c55e'
+                        : selectedStudent.location_status === 'STALE' ? '#f59e0b'
+                          : '#94a3b8'
+                    }]}>
+                      {selectedStudent.location_status === 'IN_RANGE' ? 'IN RANGE'
+                        : selectedStudent.location_status === 'STALE' ? 'STALE GPS'
+                          : 'NO GPS'}
+                    </Text>
+                  </View> */}
                   <View style={ms.detailCell}>
                     <Text style={ms.detailCellLabel}>STATUS</Text>
                     <Text style={[ms.detailCellValue, {
                       color: selectedStudent.location_status === 'IN_RANGE' ? '#22c55e'
                            : selectedStudent.location_status === 'STALE'   ? '#f59e0b'
-                           : '#94a3b8'
+                           : selectedStudent.location_status === 'OUT_OF_RANGE' ? '#ef4444'
+                           : '#94a3b8',
+                      fontSize: 11 // slightly smaller to fit text
                     }]}>
                       {selectedStudent.location_status === 'IN_RANGE' ? 'IN RANGE'
-                       : selectedStudent.location_status === 'STALE'   ? 'STALE GPS'
+                       : selectedStudent.location_status === 'STALE'   ? 'STALE (>5m)'
+                       : selectedStudent.location_status === 'OUT_OF_RANGE' ? 'OUT OF RANGE'
                        : 'NO GPS'}
                     </Text>
                   </View>
@@ -834,6 +869,29 @@ export default function ProfessorHomeScreen() {
                 <View style={ms.studentListHeader}>
                   <Text style={ms.studentListHeaderTxt}>ENROLLED STUDENTS ({radarTotal})</Text>
                 </View>
+                {/* {radarStudents.map(s => (
+                  <TouchableOpacity
+                    key={s.student_id}
+                    style={ms.studentRow}
+                    onPress={() => setSelectedStudent(s)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[ms.studentStatusDot, {
+                      backgroundColor:
+                        s.location_status === 'IN_RANGE' ? '#22c55e'
+                          : s.location_status === 'STALE' ? '#f59e0b'
+                            : '#94a3b8'
+                    }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={ms.studentName}>{s.name}</Text>
+                      <Text style={ms.studentRoll}>{s.roll_number}</Text>
+                    </View>
+                    <Text style={ms.studentDist}>
+                      {s.distance_meters != null ? `${s.distance_meters}m` : 'No GPS'}
+                    </Text>
+                    <Text style={ms.studentChevron}>›</Text>
+                  </TouchableOpacity>
+                ))} */}
                 {radarStudents.map(s => (
                   <TouchableOpacity
                     key={s.student_id}
@@ -845,15 +903,24 @@ export default function ProfessorHomeScreen() {
                       backgroundColor:
                         s.location_status === 'IN_RANGE' ? '#22c55e'
                         : s.location_status === 'STALE'  ? '#f59e0b'
+                        : s.location_status === 'OUT_OF_RANGE' ? '#ef4444'
                         : '#94a3b8'
                     }]} />
                     <View style={{ flex: 1 }}>
                       <Text style={ms.studentName}>{s.name}</Text>
                       <Text style={ms.studentRoll}>{s.roll_number}</Text>
                     </View>
-                    <Text style={ms.studentDist}>
-                      {s.distance_meters != null ? `${s.distance_meters}m` : 'No GPS'}
-                    </Text>
+                    
+                    {/* 🟢 NEW: Distance and Time Ago Column */}
+                    <View style={{ alignItems: 'flex-end', minWidth: 60 }}>
+                      <Text style={ms.studentDist}>
+                        {s.distance_meters != null ? `${s.distance_meters}m` : '—'}
+                      </Text>
+                      <Text style={ms.studentTime}>
+                        {timeAgo(s.location_updated_at)}
+                      </Text>
+                    </View>
+                    
                     <Text style={ms.studentChevron}>›</Text>
                   </TouchableOpacity>
                 ))}
@@ -1285,6 +1352,7 @@ const ms = StyleSheet.create({
   studentName: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
   studentRoll: { fontSize: 10, color: '#64748b', marginTop: 1 },
   studentDist: { fontSize: 11, fontWeight: '700', color: P, minWidth: 50, textAlign: 'right' },
+  studentTime: { fontSize: 9, color: '#94a3b8', marginTop: 2, textAlign: 'right', fontWeight: '600' },
   studentChevron: { fontSize: 16, color: '#cbd5e1', marginLeft: 2 },
 
   radarActions: {

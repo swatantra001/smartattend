@@ -44,6 +44,16 @@ export default function ProfessorTabsLayout() {
             ),
           }}
         />
+        {/* 🚀 NEW ASSIGNMENTS TAB INJECTED HERE */}
+      <Tabs.Screen
+        name="assignments"
+        options={{
+          title: 'Assignments',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="assignment" size={size} color={color} />
+          ),
+        }}
+      />
         <Tabs.Screen
           name="reports"
           options={{

@@ -9,7 +9,10 @@ class Database {
       connectionString: process.env.DATABASE_URL,
       max: 20,                    // max pool connections
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      // 1. Increase timeout to 10s to account for local latency or cold starts
+      connectionTimeoutMillis: 10000, 
+      // 2. Add an explicit 'statement_timeout' to prevent hanging queries
+      statement_timeout: 10000,
       ssl: process.env.NODE_ENV === 'production'
         ? { rejectUnauthorized: false }
         : false

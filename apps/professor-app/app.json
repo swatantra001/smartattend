@@ -4,12 +4,12 @@
     "slug": "smartattend-professor",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/professor-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1E7145"
+      "image": "./assets/professor-splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0F172A"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,8 +20,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#1E7145"
+        "foregroundImage": "./assets/professor-adaptive-icon.png",
+        "backgroundColor": "#0F172A"
       },
       "package": "com.smartattend.professor",
       "permissions": [
@@ -33,6 +33,18 @@
       ]
     },
     "plugins": [
+       [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "minSdkVersion": 26,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
       "expo-router",
       "expo-secure-store",
       [

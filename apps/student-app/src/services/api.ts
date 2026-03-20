@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '../store/auth.store';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.201.59.185:4000/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://51.20.16.157:4000/api';
 
 // ── Create axios instance ──────────────────────────────────────────────────
 const api: AxiosInstance = axios.create({
@@ -165,4 +165,31 @@ export const AttendanceAPI = {
     api.get(`/attendance/session/${sessionId}/status`),
 
   getHistory: () => api.get('/attendance/history'),
+};
+
+
+
+
+// ── Assignments (Student) ──────────────────────────────────────────────────
+export const AssignmentAPI = {
+  // Fetch all assignments for a specific course
+  getCourseAssignments: (courseId: string) => 
+    api.get(`/courses/${courseId}/assignments`),
+
+  // Fetch specific assignment details and the student's submission status
+  getAssignmentDetails: (assignmentId: string) => 
+    api.get(`/assignments/${assignmentId}`),
+
+  // Upload solution files (Requires FormData for multipart/form-data)
+  submitAssignment: (assignmentId: string, formData: FormData) => 
+    api.post(`/assignments/${assignmentId}/submit`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+
+  // Delete/Detach a submission
+  detachSubmission: (assignmentId: string) => 
+    api.delete(`/assignments/${assignmentId}/submit`),
+  // Add this inside export const AssignmentAPI = { ... }
+  deleteIndividualFile: (assignmentId: string, fileUrl: string) => 
+    api.delete(`/assignments/${assignmentId}/files`, { data: { file_url: fileUrl } }),
 };

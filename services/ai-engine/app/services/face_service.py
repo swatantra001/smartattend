@@ -1,6 +1,8 @@
 import os
 import asyncio
 import numpy as np
+from PIL import Image     #TODO: these two are added
+from transformers import pipeline
 import cv2
 import structlog
 from insightface.app import FaceAnalysis
@@ -51,11 +53,23 @@ class FaceService:
         # Warmup inference to JIT-compile ONNX graph
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
         self._app.get(dummy)
-        logger.info(
-            "InsightFace model loaded",
-            model=settings.INSIGHTFACE_MODEL,
-            device="GPU" if settings.INSIGHTFACE_CTX_ID >= 0 else "CPU",
+
+        # 2. 🟢 NEW: Load your Custom Anti-Spoofing Model!
+        # device=0 uses GPU if available, -1 uses CPU
+        device_id = 0 if settings.INSIGHTFACE_CTX_ID >= 0 else -1
+        self.liveness_detector = pipeline(
+            "image-classification", 
+            model="./models/liveness_model", 
+            device=device_id
         )
+
+        logger.info("InsightFace & Liveness models loaded successfully!")
+
+        # logger.info(
+        #     "InsightFace model loaded",
+        #     model=settings.INSIGHTFACE_MODEL,
+        #     device="GPU" if settings.INSIGHTFACE_CTX_ID >= 0 else "CPU",
+        # )
 
     # ── DETECT FACES ─────────────────────────────────────────────────────────
     def _detect(self, img_bgr: np.ndarray) -> list:
@@ -172,17 +186,60 @@ class FaceService:
         return round(float(quality), 4)
 
     # ── LIVENESS FRAME VALIDATION ─────────────────────────────────────────────
+    # async def validate_liveness_frame(
+    #     self, img_bgr: np.ndarray
+    # ) -> tuple[bool, float, Optional[list]]:
+    #     """
+    #     Quick check: does the frame contain a valid face?
+    #     Used to validate the liveness capture before heavy processing.
+    #     Returns (is_valid, det_score, bbox)
+    #     """
+    #     embedding, score, bbox = await self.extract_embedding(img_bgr)
+    #     is_valid = embedding is not None and score >= settings.FACE_MIN_DETECTION_SCORE
+    #     return is_valid, score, bbox
+    # ── LIVENESS FRAME VALIDATION (UPGRADED) ──────────────────────────────────
     async def validate_liveness_frame(
         self, img_bgr: np.ndarray
     ) -> tuple[bool, float, Optional[list]]:
         """
-        Quick check: does the frame contain a valid face?
-        Used to validate the liveness capture before heavy processing.
-        Returns (is_valid, det_score, bbox)
+        Gatekeeper check: 
+        1. Does a face exist? 
+        2. Is it a REAL 3D face, or a spoofed photo/screen?
         """
-        embedding, score, bbox = await self.extract_embedding(img_bgr)
-        is_valid = embedding is not None and score >= settings.FACE_MIN_DETECTION_SCORE
-        return is_valid, score, bbox
+        # Step 1: Extract the face (Your existing logic)
+        embedding, det_score, bbox = await self.extract_embedding(img_bgr)
+        
+        if embedding is None or det_score < settings.FACE_MIN_DETECTION_SCORE:
+            return False, det_score, None, None
+        
+
+        # Step 2: 🟢 The Anti-Spoofing Check!
+        loop = asyncio.get_event_loop()
+        
+        def _run_liveness():
+            # Convert OpenCV BGR array to a PIL Image for Hugging Face
+            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            pil_img = Image.fromarray(img_rgb)
+            
+            # Run the AI
+            result = self.liveness_detector(pil_img)
+            
+            # HuggingFace returns a list of dicts sorted by highest score
+            # Label '0' or 'LABEL_0' is our Fake/Spoof class based on the dataset
+            top_prediction = result[0]
+            predicted_label = str(top_prediction['label']).upper()
+            
+            return predicted_label, top_prediction['score']
+
+        label, liveness_score = await loop.run_in_executor(None, _run_liveness)
+        
+        # If the AI says it's a Fake/Spoof (Label 0), reject the frame!
+        if label in ['0', 'LABEL_0', 'FAKE', 'SPOOF']:
+            logger.warning(f"🚨 SPOOF DETECTED! AI Confidence: {liveness_score:.2f}")
+            return False, det_score, bbox, None # 🟢 ADDED None
+            
+        logger.info(f"✅ Real Face Confirmed! Liveness Score: {liveness_score:.2f}")
+        return True, det_score, bbox, embedding # 🟢 ADDED embedding
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

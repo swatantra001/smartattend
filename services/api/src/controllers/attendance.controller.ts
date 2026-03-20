@@ -77,6 +77,35 @@ export async function verifyAttendance(req: AuthRequest, res: Response): Promise
     return;
   }
 
+  // ── 🟢 NEW: STRICT LOCATION GATEKEEPER (5-Minute + Radius Rule) ────────────
+  const locationCheck = await db.queryOne<{ status: string }>(
+    `SELECT
+       CASE
+         WHEN sl.location IS NULL THEN 'NO_LOCATION'
+         WHEN sl.updated_at < NOW() - INTERVAL '10 minutes' THEN 'STALE'
+         WHEN NOT ST_DWithin(sl.location, sess.professor_location, sess.radius_meters) THEN 'OUT_OF_RANGE'
+         ELSE 'ELIGIBLE'
+       END as status
+     FROM attendance_sessions sess
+     LEFT JOIN student_locations sl ON sl.student_id = $2
+     WHERE sess.session_id = $1`,
+    [body.session_id, student.student_id]
+  );
+
+  if (!locationCheck) {
+    throw new AppError(404, 'Session data not found', 'NOT_FOUND');
+  }
+
+  if (locationCheck.status === 'NO_LOCATION') {
+    throw new AppError(403, 'Location not found. Ensure your GPS is on and the app has location permissions.', 'LOCATION_MISSING');
+  } else if (locationCheck.status === 'STALE') {
+    throw new AppError(403, 'Your GPS location is older than 5 minutes. Please wait a moment for it to refresh.', 'LOCATION_STALE');
+  } else if (locationCheck.status === 'OUT_OF_RANGE') {
+    throw new AppError(403, 'You are currently outside the classroom radius.', 'LOCATION_OUT_OF_RANGE');
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
+
   // Check max retry attempts
   const attemptsKey = RedisKeys.verifyAttempts(body.session_id, student.student_id);
   const attempts = await redis.incr(attemptsKey);
@@ -164,6 +193,7 @@ export async function verifyAttendance(req: AuthRequest, res: Response): Promise
        face_score = $5,
        liveness_score = $6,
        scene_score = $7,
+       captured_image_b64 = $8, -- 👈 NEW
        marked_by = 'SYSTEM',
        verification_timestamp = NOW()
      WHERE session_id = $1 AND student_id = $2`,
@@ -174,7 +204,8 @@ export async function verifyAttendance(req: AuthRequest, res: Response): Promise
       verificationStatus,
       faceScore,
       livenessScore,
-      sceneScore
+      sceneScore,
+      body.face_frame_base64 // 👈 NEW: Save the live image
     ]
   );
 
@@ -194,6 +225,7 @@ export async function verifyAttendance(req: AuthRequest, res: Response): Promise
       name: student.name,
       roll_number: student.roll_number,
       photo_url: student.face_photo_url,
+      captured_image_b64: body.face_frame_base64, // 👈 NEW: Broadcast live image
       status: isPresent ? 'PRESENT' : 'ABSENT',
       verification_status: verificationStatus,
       face_score: faceScore,
