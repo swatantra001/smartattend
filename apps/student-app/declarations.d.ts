@@ -1,0 +1,1 @@
+declare module '@azesmway/react-native-unity';

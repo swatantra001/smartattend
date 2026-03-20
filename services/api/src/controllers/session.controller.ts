@@ -120,14 +120,29 @@ export async function startSession(req: AuthRequest, res: Response): Promise<voi
     body.course_id, body.lat, body.lng, body.radius_meters
   );
   const allEnrolled = await getAllEnrolledStudents(body.course_id);
-  const inRangeIds = new Set(studentsInRange.map((s: any) => s.student_id));
-  const staleStudents = allEnrolled.filter(
-    (s: any) => s.location_stale && !inRangeIds.has(s.student_id)
+  // const inRangeIds = new Set(studentsInRange.map((s: any) => s.student_id));
+  // const staleStudents = allEnrolled.filter(
+  //   (s: any) => s.location_stale && !inRangeIds.has(s.student_id)
+  // );
+  // const notifyStudents = [
+  //   ...studentsInRange,
+  //   ...staleStudents.map((s: any) => ({ ...s, distance_meters: -1 }))
+  // ];
+  // 🟢 STRICT NOTIFICATION: Only students inside the radius with a ping < 5 mins old
+  const { rows: notifyStudents } = await db.query(
+    `SELECT s.student_id
+     FROM course_enrollments ce
+     JOIN students s ON s.student_id = ce.student_id
+     JOIN student_locations sl ON sl.student_id = s.student_id
+     WHERE ce.course_id = $1
+       AND sl.updated_at >= NOW() - INTERVAL '5 minutes'
+       AND ST_DWithin(
+         sl.location,
+         ST_MakePoint($3::float, $2::float)::geography,
+         $4
+       )`,
+    [body.course_id, body.lat, body.lng, body.radius_meters]
   );
-  const notifyStudents = [
-    ...studentsInRange,
-    ...staleStudents.map((s: any) => ({ ...s, distance_meters: -1 }))
-  ];
   //TODO: ADDED
   if (allEnrolled.length > 0) {
     const recordValues = allEnrolled
@@ -539,6 +554,7 @@ export async function getDashboard(req: AuthRequest, res: Response): Promise<voi
        ar.face_score,
        ar.liveness_score,
        ar.scene_score,
+       ar.captured_image_b64, -- 👈 NEW
        ar.marked_by,
        ar.override_reason,
        ar.verification_timestamp,
@@ -546,20 +562,32 @@ export async function getDashboard(req: AuthRequest, res: Response): Promise<voi
        -- We detect this by checking if they have an active device binding
        -- AND their stored location was within radius at session start.
        -- Simplest reliable proxy: student_locations distance check.
+       --EXISTS (
+       -- SELECT 1
+       -- FROM student_locations sl
+       -- WHERE sl.student_id = s.student_id
+       --  AND ST_DWithin(
+       --   sl.location,
+       --  sess.professor_location,
+       --  sess.radius_meters * 1.5   -- slightly wider to account for GPS drift
+       --)
+       --) AS notified
        EXISTS (
          SELECT 1
          FROM student_locations sl
          WHERE sl.student_id = s.student_id
+           -- 🟢 STRICT TIMING: Their location must have been pinged within 5 mins of the session starting!
+           AND sl.updated_at >= sess.started_at - INTERVAL '5 minutes'
            AND ST_DWithin(
              sl.location,
              sess.professor_location,
-             sess.radius_meters * 1.5   -- slightly wider to account for GPS drift
+             sess.radius_meters
            )
        ) AS notified
      FROM attendance_records ar
      JOIN students s ON s.student_id = ar.student_id
      CROSS JOIN (
-       SELECT professor_location, radius_meters
+       SELECT professor_location, radius_meters, started_at
        FROM attendance_sessions WHERE session_id = $1
      ) sess
      WHERE ar.session_id = $1
@@ -700,16 +728,16 @@ function schedulePeriodicRecheck(sessionId: string, durationMinutes: number): vo
       if (!aiResponse.ok) {
         const errText = await aiResponse.text();
         logger.error(`[SCENE RECHECK FAILED] Python AI Engine returned Status ${aiResponse.status}. Details: ${errText}`);
-        return; 
+        return;
       }
       const aiData = await aiResponse.json() as {
         outliers: string[];
-        scores: Record<string, number>; 
+        scores: Record<string, number>;
       };
 
       const outliers: string[] = aiData.outliers || [];
-      
-      if (outliers.length === 0) return; 
+
+      if (outliers.length === 0) return;
       logger.info(`AI Engine recheck for session ${sessionId}: identified ${outliers.length} outliers: ${outliers.join(', ')}`);
 
       // 🟢 THE FIX: Group by student and aggregate tokens to prevent duplicates
@@ -732,7 +760,7 @@ function schedulePeriodicRecheck(sessionId: string, durationMinutes: number): vo
       );
 
       for (const student of presentStudents) {
-          
+
         await db.query(
           `UPDATE attendance_records
            SET status = 'ABSENT',
@@ -785,7 +813,7 @@ function schedulePeriodicRecheck(sessionId: string, durationMinutes: number): vo
           `in session ${sessionId} (Identified as Outlier).`
         );
       }
-      
+
     } catch (err) {
       logger.error(`Periodic recheck error for session ${sessionId}:`, err);
     }
@@ -997,16 +1025,54 @@ export async function previewStudentsInRange(
   );
   if (!professor) throw new AppError(404, 'Professor not found', 'NOT_FOUND');
 
- // REPLACE the SQL inside previewStudentsInRange:
+  // REPLACE the SQL inside previewStudentsInRange:
 
+  // const { rows } = await db.query(
+  //   `SELECT
+  //      s.student_id,
+  //      s.name,
+  //      s.roll_number,
+  //      s.face_enrolled_at IS NOT NULL AS face_enrolled,
+  //      sl.updated_at AS location_updated_at,
+  //      -- Raw coordinates for precise client-side positioning
+  //      ST_Y(sl.location::geometry) AS student_lat,
+  //      ST_X(sl.location::geometry) AS student_lng,
+  //      ROUND(ST_Distance(
+  //        sl.location,
+  //        ST_MakePoint($3::float, $2::float)::geography
+  //      ))::int AS distance_meters,
+  //      DEGREES(ST_Azimuth(
+  //        ST_MakePoint($3::float, $2::float)::geography,
+  //        sl.location::geography
+  //      )) AS bearing_degrees,
+  //      CASE
+  //        WHEN sl.location IS NULL THEN 'UNKNOWN'
+  //        WHEN ST_DWithin(
+  //          sl.location,
+  //          ST_MakePoint($3::float, $2::float)::geography,
+  //          $4
+  //        ) THEN 'IN_RANGE'
+  //        WHEN sl.updated_at > NOW() - INTERVAL '10 minutes' THEN 'STALE'
+  //        ELSE 'UNKNOWN'
+  //      END AS location_status
+  //    FROM course_enrollments ce
+  //    JOIN students s ON s.student_id = ce.student_id
+  //    LEFT JOIN student_locations sl ON sl.student_id = s.student_id
+  //    WHERE ce.course_id = $1
+  //      AND ce.professor_id = $5
+  //    ORDER BY distance_meters ASC NULLS LAST`,
+  //   [body.course_id, body.lat, body.lng, body.radius_meters, professor.professor_id]
+  // );
+  // D:\smartattend\services\api\src\controllers\session.controller.ts
+
+  // Find the previewStudentsInRange function and update the SQL query:
   const { rows } = await db.query(
     `SELECT
        s.student_id,
        s.name,
        s.roll_number,
        s.face_enrolled_at IS NOT NULL AS face_enrolled,
-       sl.updated_at AS location_updated_at,
-       -- Raw coordinates for precise client-side positioning
+       sl.updated_at AS location_updated_at, -- 🟢 Fetches the exact timestamp
        ST_Y(sl.location::geometry) AS student_lat,
        ST_X(sl.location::geometry) AS student_lng,
        ROUND(ST_Distance(
@@ -1019,13 +1085,12 @@ export async function previewStudentsInRange(
        )) AS bearing_degrees,
        CASE
          WHEN sl.location IS NULL THEN 'UNKNOWN'
-         WHEN ST_DWithin(
-           sl.location,
-           ST_MakePoint($3::float, $2::float)::geography,
-           $4
-         ) THEN 'IN_RANGE'
-         WHEN sl.updated_at > NOW() - INTERVAL '10 minutes' THEN 'STALE'
-         ELSE 'UNKNOWN'
+         -- 🟢 Priority 1: If they are physically OUTSIDE the radius, they are immediately OUT_OF_RANGE (Red)
+         WHEN NOT ST_DWithin(sl.location, ST_MakePoint($3::float, $2::float)::geography, $4) THEN 'OUT_OF_RANGE'
+         -- 🟢 Priority 2: Now we know they are INSIDE the radius. But is the ping older than 5 minutes? (Orange)
+         WHEN sl.updated_at < NOW() - INTERVAL '5 minutes' THEN 'STALE'
+         -- 🟢 Priority 3: They are INSIDE the radius AND the ping is FRESH (< 5m) (Green)
+         ELSE 'IN_RANGE'
        END AS location_status
      FROM course_enrollments ce
      JOIN students s ON s.student_id = ce.student_id
@@ -1081,7 +1146,7 @@ export async function getCourseSessionsList(req: AuthRequest, res: Response) {
     ORDER BY s.started_at DESC
   `, [professor.professor_id, courseId]);
 
-  
+
   res.json({ success: true, data: rows });
 }
 

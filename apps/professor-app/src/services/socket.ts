@@ -2,7 +2,7 @@ import { io, Socket } from 'socket.io-client';
 // import { WS_URL } from '../constants';
 import { WSEvent } from '../types/shared';
 
-const WS_URL = process.env.EXPO_PUBLIC_WS_URL || 'http://10.201.59.185:4000';
+const WS_URL = process.env.EXPO_PUBLIC_WS_URL || 'http://51.20.16.157:4000';
 
 // ─── ChatMessage type (used by [sessionId].tsx) ───────────────────────────────
 export interface ChatMessage {

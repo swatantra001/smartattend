@@ -16,7 +16,25 @@ export async function deviceBindingMiddleware(
     if (authErr) return next(authErr);
 
     // Admin role skips device binding check
+    // return next()
     if (req.user?.role === 'ADMIN' || req.user?.role === 'PROFESSOR') return next();
+
+    // 👈 NEW: Web Platform strict check
+    if (req.headers['x-platform'] === 'web') {
+      // Check if user has ANY active mobile binding in the database
+      const existingBinding = await db.queryOne(
+        `SELECT binding_id FROM device_bindings WHERE user_id = $1 AND is_active = TRUE`,
+        [req.user!.user_id]
+      );
+      
+      // If no binding exists, they have never logged into the mobile app
+      if (!existingBinding) {
+        return next(new AppError(403, 'First login on the mobile app to register your device, then you can login here.', 'MOBILE_LOGIN_REQUIRED'));
+      }
+      
+      // If binding exists, let them into the web portal
+      return next(); 
+    }
 
     const rawDeviceId = req.headers['x-device-id'] as string;
     if (!rawDeviceId) {

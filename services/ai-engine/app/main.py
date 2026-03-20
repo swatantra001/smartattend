@@ -8,7 +8,8 @@ from app.config import settings
 from app.database import init_db
 from app.services.face_service import face_service
 from app.services.scene_service import scene_service
-from app.routers import enroll, verify, upload, health
+from app.routers import enroll, verify, upload, health, assignments
+
 
 logger = structlog.get_logger()
 
@@ -84,3 +85,4 @@ app.include_router(health.router)
 app.include_router(enroll.router)
 app.include_router(verify.router)
 app.include_router(upload.router)
+app.include_router(assignments.router)

@@ -46,3 +46,23 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+
+# Ignore Firebase Credentials
+*serviceAccountKey.json
+*-7803f-*.json
+smartattend-7803f-7e839dfe49db.json
+
+# Ignore Python Cache (This is why your AWS keys leaked)
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# Ignore AI Models and heavy binaries
+services/ai-engine/models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx

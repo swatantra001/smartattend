@@ -50,6 +50,14 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* 🚀 INJECTED ASSIGNMENTS TAB */}
+      <Tabs.Screen
+        name="assignments"
+        options={{
+          title: 'Assignments',
+          tabBarIcon: ({ color, size }) => <TabIcon emoji="📝" color={color} size={size} />,
+        }}
+      />
       <Tabs.Screen
         name="profile"
         options={{

@@ -16,7 +16,7 @@ let _socket: Socket | null = null;
 export function connectSocket(accessToken: string): Socket {
   if (_socket && _socket.connected) return _socket;
 
-  const API_BASE_URL = process.env.EXPO_PUBLIC_WS_URL  || 'http://10.114.10.185:4000';
+  const API_BASE_URL = process.env.EXPO_PUBLIC_WS_URL  || 'http://51.20.16.157:4000';
 
   _socket = io(API_BASE_URL, {
     transports: ['websocket', 'polling'],

@@ -673,6 +673,27 @@ export default function LoginPage() {
                   Forgot your password?
                 </button>
 
+                {/* add beautiful method to redirect on student or professor site */}
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button 
+                      onClick={() => window.location.href = 'http://localhost:3001'} 
+                      className="lp-btn" 
+                      style={{ flex: 1, background: 'rgba(139,92,246,.08)', color: '#8b5cf6', boxShadow: 'none', fontSize: 12, padding: '10px' }}
+                    >
+                      👨‍🏫 Professor
+                    </button>
+                    <button 
+                      onClick={() => window.location.href = 'http://localhost:3002'} 
+                      className="lp-btn" 
+                      style={{ flex: 1, background: 'rgba(16,185,129,.08)', color: '#10b981', boxShadow: 'none', fontSize: 12, padding: '10px' }}
+                    >
+                      🎓 Student
+                    </button>
+                  </div>
+                </div>
+                
+
                 <div className="lp-note">
                   <LockIcon/>
                   Administrator access only. Faculty log in via the professor app.
