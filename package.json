@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "services/*",
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "build:shared": "npm run build --workspace=@smartattend/shared",
